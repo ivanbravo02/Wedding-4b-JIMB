@@ -55,7 +55,7 @@ class ModeloFormularios{
         $stmt->bindParam(":password", $datos['password'], PDO::PARAM_STR);
         $stmt->bindParam(":id", $datos['id'], PDO::PARAM_INT);
         $stmt->bindParam(":token", $datos['token'], PDO::PARAM_STR);
-        
+    
         if ($stmt->execute()) {
             return "ok";
         } else {
@@ -63,12 +63,32 @@ class ModeloFormularios{
         }
         $stmt = null;
     }
-
+    /**
+     * 
+     */
 
      static public function mdlEliminarRegistro($tabla, $valor){
         $stmt = Conexion::conectar()->prepare("DELETE FROM $tabla WHERE token= :token");
 
         $stmt->bindParam(":token", $valor, PDO::PARAM_INT);
+        
+        if ($stmt->execute()) {
+            return "ok";
+        } else {
+            print_r(Conexion::conectar()-> errorInfo());
+        }
+        $stmt = null;
+     }
+     /**
+     * Actualizar intentos fallidos
+     */
+
+     static public function mdlActualizarIntentosFallidos($tabla, $valor, $token){
+        $stmt = Conexion::conectar()->prepare("UPDATE $tabla SET intentos_fallidos=:intentos_fallidos
+         WHERE token= :token");
+
+        $stmt->bindParam(":intentos_fallidos", $valor, PDO::PARAM_INT);
+        $stmt->bindParam(":token", $token, PDO::PARAM_INT);
         
         if ($stmt->execute()) {
             return "ok";

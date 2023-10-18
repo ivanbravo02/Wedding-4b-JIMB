@@ -16,12 +16,12 @@ class ControladorFormularios
 
                 $tabla = "registros";
                 $token = md5($_POST["registroNombre"] . "+" . $_POST['registroEmail'],);
+                $encriptarPassword = crypt($_POST["registroPassword"], '$2a$07$wwwinnovara3dcomwebapp$');
                 $datos = array(
                     "token" => $token,
                     "nombre" => $_POST['registroNombre'],
                     "email" => $_POST['registroEmail'],
-                    "password" => $_POST['registroPassword']
-                );
+                    "password" => $encriptarPassword);
                 $respuesta = ModeloFormularios::mdlRegistro($tabla, $datos);
                 //return $_POST["registroNombre"]. "<br>". $_POST["registroEmail"]. "<br>". $_POST["registroPassword"]. "<br>";
                 //return $_POST["registroNombre"];
@@ -53,10 +53,15 @@ class ControladorFormularios
             $valor = $_POST['ingresoEmail'];
 
             $respuesta = ModeloFormularios::mdlSeleccionarRegistros($tabla, $item, $valor);
+            $encriptarPassword = crypt($_POST["ingresoPassword"], '$2a$07$wwwinnovara3dcomwebapp$');
 
             if (is_array($respuesta)) { //$respuesta != null
                 //echo "<pre>"; print_r($respuesta); echo "</pre>";
-                if ($respuesta['email'] == $_POST['ingresoEmail'] && $respuesta['password'] == $_POST['ingresoPassword']) {
+
+                if ($respuesta['email'] == $_POST['ingresoEmail'] && $respuesta['password'] ==$encriptarPassword) {
+                    ModeloFormularios::mdlActualizarIntentosFallidos(
+                    $tabla,0,$respuesta["token"]);
+
                     $_SESSION['validarIngreso'] = "ok";
                     echo '<script>
                         if(window.history.replaceState){
@@ -65,12 +70,26 @@ class ControladorFormularios
                             window.location = "index.php?pagina=inicio";
                         </script>';
                 } else {
+                    if($respuesta["intentos_fallidos"] < 3){
+                        $tabla = "registro";
+                        $intentos_fallidos = $respuesta["intentos_fallidos"] + 1;
+                        $actualizarIntentosFallidos = ModeloFormularios::mdlActualizarIntentosFallidos(
+                            $tabla,
+                            $intentos_fallidos,
+                            $respuesta["token"]
+                        );
+    
+                        //echo '<pre>'; print_r($intentos_fallidos); echo '</pre>';
+                    }else{
+                        echo '<div class="alert alert-waring">RECAPCHA! Debes validar que no eres un robot </div>';
+                    }
                     echo '<script>
-                        if(window.history.replaceState){
-                            window.history.replaceState(null, null, window.location.href)
-                            }
-                        </script>';
-                    echo '<div class="alert alert-danger">Error al Ingresar al Sistema, el Email o el Password no coinciden</div>';
+                    if(window.history.replaceState){
+                        window.history.replaceState(null, null, window.location.href)
+                        }
+                    </script>';
+                echo '<div class="alert alert-danger">Error al Ingresar al Sistema, el Email o el Password no coinciden</div>';
+                    
                 }
             } else {
                 echo '<script>
@@ -98,7 +117,7 @@ class ControladorFormularios
                     if ($compararToken == $_POST['tokenUsuario']){
                         if ($_POST['actualizarPassword'] != "") {
                             if( preg_match('/^[0-9a-zA-Z]+$/', $_POST["registroPassword"])){
-                                $password = $_POST['actualizarPassword'];
+                                $password = crypt($_POST['actualizarPassword'], '$2a$07$wwwinnovara3dcomwebapp$');
                             }
                         } else {
                             $password = $_POST['passwordActual'];
@@ -123,36 +142,37 @@ class ControladorFormularios
             };
         }
     }
-
-    /**
+/**
      * Eliminar Registro
      */
 
-    public function ctrEliminarRegistro()
-    {
-        if (isset($_POST["eliminarRegistro"])) {
+     public function ctrEliminarRegistro()
+     {
+         if (isset($_POST["eliminarRegistro"])) {
+ 
+             $usuario = ModeloFormularios::mdlSeleccionarRegistros("registros", "token", $_POST["eliminarRegistro"]);
+             $compararToken = md5($usuario ["nombre"] . "+" . $usuario["email"]);
+ 
+             if ($compararToken == $_POST["eliminarRegistro"]){
+ 
+                 $tabla = "registros";
+                 $valor = $_POST["eliminarRegistro"];
+ 
+                 $respuesta = ModeloFormularios::mdlEliminarRegistro($tabla, $valor);
+ 
+                 if ($respuesta == "ok") {
+                     echo '<script>
+                 if (window.history.replaceState) {
+                     window.history.replaceState(null, null, window.location.href);
+                 }
+                 window.location = "index.php?pagina=inicio";
+             </script>
+             ';
+                 }
+             }
+ 
+         }
+     }
+ }
 
-            $usuario = ModeloFormularios::mdlSeleccionarRegistros("registros", "token", $_POST["eliminarRegistro"]);
-            $compararToken = md5($usuario ["nombre"] . "+" . $usuario["email"]);
-
-            if ($compararToken == $_POST["eliminarRegistro"]){
-
-                $tabla = "registros";
-                $valor = $_POST["eliminarRegistro"];
     
-                $respuesta = ModeloFormularios::mdlEliminarRegistro($tabla, $valor);
-    
-                if ($respuesta == "ok") {
-                    echo '<script>
-                if (window.history.replaceState) {
-                    window.history.replaceState(null, null, window.location.href);
-                }
-                window.location = "index.php?pagina=inicio";
-            </script>
-            ';
-                }
-            }
-           
-        }
-    }
-}
